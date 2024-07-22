@@ -6,12 +6,13 @@ import {
   selectOrRemove,
 } from './merge-util';
 import { pcellData } from './pcell-data';
-import { traversePath } from './split-util';
+import { ensureDescendantsHierarchy2, traversePath } from './split-util';
+import {isEqual} from 'lodash';
 import './style.css';
 
 const ta: HTMLTextAreaElement | null =
   document.querySelector<HTMLTextAreaElement>('#JS');
-const tsel: HTMLTextAreaElement | null =
+const ta2: HTMLTextAreaElement | null =
   document.querySelector<HTMLTextAreaElement>('#SEL');
 
 let cloned = structuredClone(pcellData);
@@ -24,12 +25,14 @@ mergePickedObjects(cloned, immData as any, {
   onError: (e: unknown) => console.error(e),
 });
 
+const merged = cloned ; // structuredClone(cloned);
+
 if (ta != null) {
-  ta.value = JSON.stringify(cloned, undefined, 2);
+  ta.value = JSON.stringify(merged, undefined, 2);
 }
 
 const sel = selectOrRemove(
-  cloned,
+  merged,
   {
     operator: FilterOperator.sEQ,
     property: 'serverId',
@@ -38,14 +41,35 @@ const sel = selectOrRemove(
   'select'
 );
 
-if (tsel != null) {
-  tsel.value = JSON.stringify(sel, undefined, 2);
-}
+/*
+if (ta2 != null) {
+  ta2.value = JSON.stringify(sel, undefined, 2);
+}*/
+
+
+let target = {};
+
+// for each path seg, create the proper object
+// $ --> root {}
+// [content][<num>] --> array with index
+// [foo][bar] --> object with property "foo" holding object with property "bar", which holds our object
 
 sel.forEach((ssel) => {
   if (ssel.path != null) {
-    console.log(`Process ${ssel.path}`);
-    const res = traversePath(cloned, ssel.path);
-    console.log(`Done: ${res}`);
+    console.log(`Process. ${ssel.path}`);
+    // debugger;
+    // const res = traversePath(cloned, ssel.path);
+    target = ensureDescendantsHierarchy2(merged, target, { value: ssel.path!, property: 'id', aspect:'foo'})
+    console.log(`Done: `); // ${res}
   }
 });
+
+// target = ensureDescendantsHierarchy2(merged, target, { value: `$['content'][0]['header'][2]`, property: 'id', aspect:'foo'})
+
+console.log(`TRG`, JSON.stringify(target, undefined,2));
+
+if (ta2 != null) {
+  ta2.value = JSON.stringify(target, undefined, 2);
+}
+
+console.log('EQ ',isEqual(target,immData));

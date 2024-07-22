@@ -13,6 +13,7 @@
     "vite": "^5.3.4"
   },
   "dependencies": {
-    "jsonpath-plus": "7.2.0"
+    "jsonpath-plus": "7.2.0",
+    "lodash": "4.17.21"
   }
 }
