@@ -1220,3 +1220,13 @@ export function hasOwnProperty(obj: object, key: string | symbol | number) {
 export function replaceAll(src: string, find: string, replace: string) {
   return src.replace(new RegExp(escapeRegExp(find), 'g'), replace);
 }
+
+export function doCompare<OT=any>(op1: OT, operator:FilterOperator, op2: OT): boolean {
+  switch(operator) {
+    case FilterOperator.EQ: return op1 == op2;
+    case FilterOperator.sEQ: return op1 === op2;
+    case FilterOperator.NEQ: return op1 != op2;
+    case FilterOperator.sNEQ: return op1 !== op2;
+    default: return false;
+  }
+}

@@ -1,5 +1,5 @@
-import { JSONPath } from 'jsonpath-plus';
-import { MergeObject, MergeOptions, select } from './merge-util';
+
+import { FilterOperator, FilterOptions, MergeObject, MergeOptions, doCompare, select } from './merge-util';
 import { ViewConfig } from './types';
 
 export function traversePath(model: ViewConfig, path: string): string {
@@ -34,23 +34,20 @@ export function ensureDescendantsHierarchy2<S extends MergeObject>(
   options: Required<
     Pick<
       MergeOptions, // only string allowed for paths!!
-      'aspect' | 'property' | 'value'
-    >
+      'property' | 'value'
+    > & { filterProperty: string, filterOp: FilterOperator, filterValue: string}
   >
 ): S {
 
   if(typeof options.value !== 'string') {
     throw new Error('wrong type for options.value. must be a string and a valid json path');
   }  
-  const elems = options.value.split('[');
+  const elems = jsonPathToSegments(options.value);
   let p2 ='';
   let lastvalidElem = -1;
   let lastValidSel = null;
   for (let i = 0; i < elems.length; i++) {
-    let seg = elems[i];
-    if(seg.endsWith(']')) {
-      seg = '['.concat(seg);
-    }
+    let seg = elems[i];    
     p2 = p2.concat(seg);
     // console.log(`select via: ${p2}`);
     const seltrg = select(trg, {
@@ -61,7 +58,7 @@ export function ensureDescendantsHierarchy2<S extends MergeObject>(
     });
     if(seltrg.length === 0) {
       console.log(`not found anything @: ${lastvalidElem}`,p2,seg)
-      lastValidSel = createProp(lastValidSel, seg, selmerged[0]);
+      lastValidSel = createProp(lastValidSel, seg, selmerged[0], { operator: options.filterOp, property: options.filterProperty, value: options.filterValue});
       
     } else {
       // 
@@ -73,20 +70,18 @@ export function ensureDescendantsHierarchy2<S extends MergeObject>(
   return trg;
 }
 
-function createProp(obj: Record<string,any>| any[], propName:string, selectedInSrc: Record<string,any>| any[]) {
-  if(propName==='$') {
+function createProp(obj: Record<string,any>| any[], jsonPathSegment:string, selectedInSrc: Record<string,any>| any[], options: FilterOptions<string>) {
+  if(jsonPathSegment==='$') {
     return obj;
   }
   
-  propName = propName.replace('[','');
-  propName = propName.replace(']','');
-  propName= propName.replaceAll(`'`,'');
+  const propName = jsonPathSegmentToPropertyName(jsonPathSegment);
   
   let created = undefined;
   if(Array.isArray(selectedInSrc)) {
     created=[];
   } else if(typeof selectedInSrc === 'object') {
-    created= fill({},selectedInSrc);
+    created= fill({},selectedInSrc, options);
   }
 
   if(created!=null && Array.isArray(obj)) {
@@ -97,9 +92,25 @@ function createProp(obj: Record<string,any>| any[], propName:string, selectedInS
   return created
 }
 
-function fill(created:Record<string,any>, original: Record<string,any>): Record<string,any> {
-  // here we should allow to spec the contributor/filter prop!
-  if(original.serverId==='IMM') {
+function jsonPathToSegments(fullPath: string): string[] {
+  return fullPath.split(/(?=\[)/g); //
+  /* const elems = fullPath.split('[');
+  return elems.map(e => e.endsWith(']') ? ('['.concat(e)):e)*/
+}
+
+function jsonPathSegmentToPropertyName(segment: string): string {
+  let propName = segment;
+  propName = propName.replace('[','');
+  propName = propName.replace(']','');
+  propName= propName.replaceAll(`'`,'');
+  return propName;
+}
+
+function fill(created:Record<string,any>, original: Record<string,any>, options: FilterOptions<string>): Record<string,any> {
+  // if the original object has the property with the desired value (e.g. serverId==="IMM")
+  // then we clone the tree from the original
+  // TODO: this subtree in turn might have objects form other servers in it. we need to strip that as well
+  if(options.property!=null && doCompare(original[options.property],options.operator ?? FilterOperator.sEQ, `${options.value}`)) {
     const clonedOrig = structuredClone(original);
     created =  {
       ...clonedOrig  
@@ -108,6 +119,8 @@ function fill(created:Record<string,any>, original: Record<string,any>): Record<
   } else if(original.id !=null) {
     created.id = original.id
   }
+
+  // TODO: more properties, use whitlist/blacklist
 
   return created
 }

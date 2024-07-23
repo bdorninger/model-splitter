@@ -59,12 +59,12 @@ sel.forEach((ssel) => {
     console.log(`Process. ${ssel.path}`);
     // debugger;
     // const res = traversePath(cloned, ssel.path);
-    target = ensureDescendantsHierarchy2(merged, target, { value: ssel.path!, property: 'id', aspect:'foo'})
+    target = ensureDescendantsHierarchy2(merged, target, { property: 'id',value: ssel.path!, filterOp: FilterOperator.sEQ, filterProperty: 'serverId', filterValue: 'IMM'})
     console.log(`Done: `); // ${res}
   }
 });
 
-// target = ensureDescendantsHierarchy2(merged, target, { value: `$['content'][0]['header'][2]`, property: 'id', aspect:'foo'})
+// target = ensureDescendantsHierarchy2(merged, target, { value: `$['content'][0]['header'][2]`, property: 'id'})
 
 console.log(`TRG`, JSON.stringify(target, undefined,2));
 
