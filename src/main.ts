@@ -6,7 +6,7 @@ import {
   selectOrRemove,
 } from './merge-util';
 import { pcellData } from './pcell-data';
-import { ensureDescendantsHierarchy2, traversePath } from './split-util';
+import { ensureDescendantsHierarchy2, split, traversePath } from './split-util';
 import {isEqual} from 'lodash';
 import './style.css';
 
@@ -31,45 +31,18 @@ if (ta != null) {
   ta.value = JSON.stringify(merged, undefined, 2);
 }
 
-const sel = selectOrRemove(
-  merged,
-  {
-    operator: FilterOperator.sEQ,
-    property: 'serverId',
-    value: 'IMM',
-  },
-  'select'
-);
-
-/*
-if (ta2 != null) {
-  ta2.value = JSON.stringify(sel, undefined, 2);
-}*/
-
-
-let target = {};
-
-// for each path seg, create the proper object
-// $ --> root {}
-// [content][<num>] --> array with index
-// [foo][bar] --> object with property "foo" holding object with property "bar", which holds our object
-
-sel.forEach((ssel) => {
-  if (ssel.path != null) {
-    console.log(`Process. ${ssel.path}`);
-    // debugger;
-    // const res = traversePath(cloned, ssel.path);
-    target = ensureDescendantsHierarchy2(merged, target, { property: 'id',value: ssel.path!, filterOp: FilterOperator.sEQ, filterProperty: 'serverId', filterValue: 'IMM'})
-    console.log(`Done: `); // ${res}
-  }
-});
+const target = split(merged,{
+  property: 'serverId',
+  value: 'IMM',
+  operator: FilterOperator.sEQ
+})
 
 // target = ensureDescendantsHierarchy2(merged, target, { value: `$['content'][0]['header'][2]`, property: 'id'})
 
 console.log(`TRG`, JSON.stringify(target, undefined,2));
 
 if (ta2 != null) {
-  ta2.value = JSON.stringify(target, undefined, 2);
+  ta2.value = `split for IMM:\n\n`.concat(JSON.stringify(target, undefined, 2));
 }
 
 console.log('EQ ',isEqual(target,immData));
