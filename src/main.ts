@@ -7,7 +7,7 @@ import {
 } from './merge-util';
 import { pcellData } from './pcell-data';
 import { ensureDescendantsHierarchy2, split, traversePath } from './split-util';
-import {isEqual} from 'lodash';
+
 import './style.css';
 // import { doTestSetup } from './test/setup';
 
@@ -51,4 +51,3 @@ if (ta2 != null) {
   ta2.value = `split for IMM:\n\n`.concat(JSON.stringify(target, undefined, 2));
 }
 
-console.log('EQ ',isEqual(target,immData));
