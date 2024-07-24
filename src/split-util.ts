@@ -23,9 +23,7 @@ export function split(merged: ViewConfig, options: FilterOptions): ViewConfig {
   
   sel.forEach((ssel) => {
     if (ssel.path != null) {
-      console.log(`Process. ${ssel.path}`);
-      // debugger;
-      // const res = traversePath(cloned, ssel.path);
+      console.log(`Process. ${ssel.path}`);      
       target = ensureDescendantsHierarchy2(merged, target, { property: 'id',value: ssel.path!, filterOp: FilterOperator.sEQ, filterProperty: 'serverId', filterValue: 'IMM'})
       console.log(`Done: `); // ${res}
     }

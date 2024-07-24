@@ -9,6 +9,12 @@ import { pcellData } from './pcell-data';
 import { ensureDescendantsHierarchy2, split, traversePath } from './split-util';
 import {isEqual} from 'lodash';
 import './style.css';
+// import { doTestSetup } from './test/setup';
+
+/*(function bootstrap () {
+  doTestSetup()    
+}());*/
+
 
 const ta: HTMLTextAreaElement | null =
   document.querySelector<HTMLTextAreaElement>('#JS');
