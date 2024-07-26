@@ -1183,7 +1183,8 @@ function markObjectAsContributed(
     !Object.isExtensible(mergeObj) // frozen, sealed,....
   ) {
     return mergeObj;
-  }
+  }  
+
   if (
     options?.contributerPropertyName &&
     options?.contributerPropertyName.trim().length > 0
@@ -1229,4 +1230,59 @@ export function doCompare<OT=any>(op1: OT, operator:FilterOperator, op2: OT): bo
     case FilterOperator.sNEQ: return op1 !== op2;
     default: return false;
   }
+}
+
+
+export function markContrib(  
+  model: unknown|unknown[],
+  options: FilterOptions & { objectsMustHaveProps?:string[], doNotFollow?: string[], eraseMeta?: boolean }
+): void {
+  
+  if(typeof model !=='object') {
+    return;
+  }
+
+  if(Array.isArray(model)) {
+    model.forEach(el => markContrib(el,options))
+    return;
+  }
+
+  const m = model as Record<string,any>;
+  const prop = options.property??'$contributor';  
+  const dnf = options.doNotFollow??[];
+  const mustHave = options.objectsMustHaveProps;
+
+  let markHere = true;
+  for(let p in m) {
+    if(p===prop) {
+      continue;
+    }    
+    if(typeof m[p]==='object' && !dnf.find(n => n===p) && !(Array.isArray(m[p]) && m[p].length===0)) {
+      
+      markContrib(m[p], options);
+      markHere = false || (options.eraseMeta ?? false);
+    } 
+  }
+  
+  if(markHere) {
+    if(Object.hasOwn(m,prop)) {
+      if(options.eraseMeta) {
+        delete(m[prop]);
+      } else {
+        console.error(`Already marked with contrib...overwriting ${m[prop]} with ${options.value}`)
+      }
+    }
+    if(mustHave==null || mustHave.find(p => p===prop)) {
+      m[prop] = options.value;
+    }
+  }  
+
+  /*  
+  if(markHere && m[prop]!=null && Array.isArray(m[prop])) {
+    m[prop].push(options.value);
+  } else if(markHere && m[prop]==null) {
+    m[prop] = [options.value];
+  }  
+  */
+    
 }

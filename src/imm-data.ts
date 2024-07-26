@@ -12,6 +12,7 @@ export const immData: ViewConfigRoot = {
         {
           id: 'TASK_AllProductionRelevant',
           viewId: 'evs-group',
+          onlyIMM: 'someIMM',
           content: [
             {
               viewId: 'evs-navigation-button',
@@ -22,6 +23,9 @@ export const immData: ViewConfigRoot = {
               viewId: 'evs-navigation-button',
               size: 'medium',
               evsRouterLink: 'Parts',
+              inputs: {
+                abc:'def'
+              }
             },
           ],
         },

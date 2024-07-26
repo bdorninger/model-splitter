@@ -1,12 +1,11 @@
 import { immData } from './imm-data';
 import {
   FilterOperator,
-  mergePickedObjects,
-  select,
-  selectOrRemove,
+  markContrib,
+  mergePickedObjects
 } from './merge-util';
 import { pcellData } from './pcell-data';
-import { ensureDescendantsHierarchy2, split, traversePath } from './split-util';
+import { split } from './split-util';
 
 import './style.css';
 // import { doTestSetup } from './test/setup';
@@ -21,9 +20,13 @@ const ta: HTMLTextAreaElement | null =
 const ta2: HTMLTextAreaElement | null =
   document.querySelector<HTMLTextAreaElement>('#SEL');
 
-let cloned = structuredClone(pcellData);
+let clonedpcell = structuredClone(pcellData);
+clonedpcell.serverId = 'PCELL'; // the view model service inserts a top level serverID into the "dominant" model
+markContrib(clonedpcell,{ property: '$contributors', value: 'PCELL', doNotFollow: ['inputs']})
+let clonedimm = structuredClone(immData);
+markContrib(clonedimm,{ property: '$contributors', value: 'IMM', doNotFollow: ['inputs']})
 
-mergePickedObjects(cloned, immData as any, {
+mergePickedObjects(clonedpcell, clonedimm as any, {
   property: 'id',
   skipRemainder: false,
   contributerPropertyName: 'serverId',
@@ -31,23 +34,31 @@ mergePickedObjects(cloned, immData as any, {
   onError: (e: unknown) => console.error(e),
 });
 
-const merged = cloned ; // structuredClone(cloned);
+const merged = clonedpcell ; // structuredClone(cloned);
 
 if (ta != null) {
   ta.value = JSON.stringify(merged, undefined, 2);
 }
 
+const splitDevice='PCELL';
 const target = split(merged,{
-  property: 'serverId',
-  value: 'IMM',
+  property: '$contributors',
+  value: splitDevice,
   operator: FilterOperator.sEQ
 })
 
 // target = ensureDescendantsHierarchy2(merged, target, { value: `$['content'][0]['header'][2]`, property: 'id'})
-
-console.log(`TRG`, JSON.stringify(target, undefined,2));
+markContrib(target,{
+  property:'$contributors',
+  eraseMeta:true
+})
+markContrib(target,{
+  property:'serverId',
+  eraseMeta:true
+})
+// console.log(`TRG`, JSON.stringify(target, undefined,2));
 
 if (ta2 != null) {
-  ta2.value = `split for IMM:\n\n`.concat(JSON.stringify(target, undefined, 2));
+  ta2.value = `split for ${splitDevice}:\n\n`.concat(JSON.stringify(target, undefined, 2));
 }
 
