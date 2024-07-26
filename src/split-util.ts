@@ -2,6 +2,17 @@
 import { FilterOperator, FilterOptions, MergeObject, MergeOptions, doCompare, select, selectOrRemove } from './merge-util';
 import { ViewConfig, ViewConfigRoot } from './types';
 
+
+
+/**
+ * TODO: problems with paths containing indices for arrays:
+ * we need to process them in sorted order, toherwise we might end up pushing to wrong arrays in the target
+ * 
+ * 
+ * @param merged 
+ * @param options 
+ * @returns 
+ */
 export function split(merged: ViewConfig, options: FilterOptions): ViewConfig {
   const sel = selectOrRemove(
     merged,
@@ -12,10 +23,11 @@ export function split(merged: ViewConfig, options: FilterOptions): ViewConfig {
   let target = {};
    
   // does it make a difference ? 
-  sel.sort(
+  // YES: sorting causes mangling up the structure in the target!
+  /*sel.sort(
     (a, b) =>
-      (b.path?.split('[').length ?? 0) - (a.path?.split('[').length ?? 0)
-  );
+      (a.path?.split('[').length ?? 0) - (b.path?.split('[').length ?? 0)
+  );*/
 
   console.log(`Objects found with ${options.property} ${options.operator} ${options.value}`)
   sel.forEach(s => console.log(s));
