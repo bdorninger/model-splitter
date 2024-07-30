@@ -1,5 +1,5 @@
 
-import { FilterOperator, FilterOptions, MergeObject, MergeOptions, doCompare, remove, select, selectOrRemove } from './merge-util';
+import { FilterOperator, FilterOptions, MergeObject, doCompare, remove, select, selectOrRemove } from './merge-util';
 import { ViewConfig } from './types';
 
 /*
@@ -15,7 +15,7 @@ import { ViewConfig } from './types';
  * @param options 
  * @returns 
  */
-export function split(merged: ViewConfig, options: FilterOptions): ViewConfig {
+export function split(merged: ViewConfig, options: FilterOptions & { copyProperties?: string[]}): ViewConfig {
   const sel = selectOrRemove(
     merged,
     options,
@@ -25,7 +25,7 @@ export function split(merged: ViewConfig, options: FilterOptions): ViewConfig {
   let target = {};
 
   fillRecord(target,merged,{
-    copyProperties: ['viewId', 'id', 'viewModelId']
+    copyProperties: options.copyProperties ?? []
   });
    
   // does it make a difference ? 
@@ -41,7 +41,8 @@ export function split(merged: ViewConfig, options: FilterOptions): ViewConfig {
   
   sel.forEach((ssel) => {
     if (ssel.path != null) {      
-      target = recreateObjectHierarchy(merged, target, { property: 'id',value: ssel.path!, filterOp: options.operator!, filterProperty: options.property!, filterValue: options.value!})      
+      target = recreateObjectHierarchy(merged, target, { 
+      path: ssel.path!, operator: options.operator!, property: options.property!, value: options.value!})      
     }
   });
 
@@ -61,18 +62,12 @@ export function split(merged: ViewConfig, options: FilterOptions): ViewConfig {
 function recreateObjectHierarchy<S extends MergeObject>(
   obj: S,
   trg: S,
-  options: Required<
-    Pick<
-      MergeOptions, // only string allowed for paths!!
-      'property' | 'value'
-    > & { filterProperty: string, filterOp: FilterOperator, filterValue: string}
-  >
-): S {
+  options: FilterOptions & { path: string, copyProperties?: string[]}): S {
 
   if(typeof options.value !== 'string') {
     throw new Error('wrong type for options.value. must be a string and a valid json path');
   }  
-  const elems = jsonPathToSegments(options.value);
+  const elems = jsonPathToSegments(options.path);
   let p2 ='';  
   let lastValidSel = null;
   for (let i = 0; i < elems.length; i++) {
@@ -85,7 +80,7 @@ function recreateObjectHierarchy<S extends MergeObject>(
       jsonPathExpression: p2,
     });
     if(seltrg.length === 0) {      
-      lastValidSel = createProperty(lastValidSel, seg, selmerged[0], { operator: options.filterOp, property: options.filterProperty, value: options.filterValue});      
+      lastValidSel = createProperty(lastValidSel, seg, selmerged[0], { operator: options.operator, property: options.property, value: options.value});      
     } else {      
       lastValidSel = seltrg[0];      
     }
@@ -132,7 +127,7 @@ function fillRecord(created:Record<string,any>, original: Record<string,any>, op
   // if the original object has the property with the desired value (e.g. serverId==="IMM")
   // then we clone the tree from the original
   // TODO: this subtree in turn might have objects form other servers in it. we need to strip that as well
-  const copyProps = options.copyProperties==null ? ['id', 'viewId', 'nameKey', 'imageKey', 'position','inputs'] : options.copyProperties;
+  const copyProps = options.copyProperties ?? [];
   const clonedOrig = structuredClone(original);
   // console.log('FILL: ',created, clonedOrig, options)  
   if(options.property!=null && doCompare(original[options.property],options.operator ?? FilterOperator.sEQ, `${options.value}`)) {    

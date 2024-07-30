@@ -44,7 +44,8 @@ const splitDevice='PCELL';
 const target = split(merged,{
   property: '$contributors',
   value: splitDevice,
-  operator: FilterOperator.sEQ
+  operator: FilterOperator.sEQ,
+  copyProperties:  ['id', 'viewId', 'nameKey', 'imageKey', 'position','inputs', 'viewModelId']
 })
 
 // target = ensureDescendantsHierarchy2(merged, target, { value: `$['content'][0]['header'][2]`, property: 'id'})
