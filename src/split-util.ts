@@ -1,6 +1,6 @@
 
 import { FilterOperator, FilterOptions, MergeObject, MergeOptions, doCompare, remove, select, selectOrRemove } from './merge-util';
-import { ViewConfig, ViewConfigRoot } from './types';
+import { ViewConfig } from './types';
 
 /*
  * TODO: 
@@ -24,7 +24,7 @@ export function split(merged: ViewConfig, options: FilterOptions): ViewConfig {
   
   let target = {};
 
-  fill(target,merged,{
+  fillRecord(target,merged,{
     copyProperties: ['viewId', 'id', 'viewModelId']
   });
    
@@ -40,14 +40,13 @@ export function split(merged: ViewConfig, options: FilterOptions): ViewConfig {
   console.log(`------------`)
   
   sel.forEach((ssel) => {
-    if (ssel.path != null) {
-      // console.log(`Process. ${ssel.path}`);      
-      target = ensureDescendantsHierarchy2(merged, target, { property: 'id',value: ssel.path!, filterOp: options.operator!, filterProperty: options.property!, filterValue: options.value!})
-      // console.log(`Done: `); // ${res}
+    if (ssel.path != null) {      
+      target = recreateObjectHierarchy(merged, target, { property: 'id',value: ssel.path!, filterOp: options.operator!, filterProperty: options.property!, filterValue: options.value!})      
     }
   });
 
 
+  //
   remove(target,{
     property:options.property,
     value: options.value,
@@ -58,8 +57,8 @@ export function split(merged: ViewConfig, options: FilterOptions): ViewConfig {
   return target;
 }
 
-// path
-export function ensureDescendantsHierarchy2<S extends MergeObject>(
+// Recreates the contributor specific hierarchy and copies selected content
+function recreateObjectHierarchy<S extends MergeObject>(
   obj: S,
   trg: S,
   options: Required<
@@ -78,20 +77,16 @@ export function ensureDescendantsHierarchy2<S extends MergeObject>(
   let lastValidSel = null;
   for (let i = 0; i < elems.length; i++) {
     let seg = elems[i];    
-    p2 = p2.concat(seg);
-    // console.log(`select via: ${p2}`);
+    p2 = p2.concat(seg);    
     const seltrg = select(trg, {
       jsonPathExpression: p2,
     });
     const selmerged = select(obj, {
       jsonPathExpression: p2,
     });
-    if(seltrg.length === 0) {
-      // console.log(`not found anything @: ${lastvalidElem} current seg '${seg}'`,p2)
-      lastValidSel = createProp(lastValidSel, seg, selmerged[0], { operator: options.filterOp, property: options.filterProperty, value: options.filterValue});
-      
-    } else {
-      // 
+    if(seltrg.length === 0) {      
+      lastValidSel = createProperty(lastValidSel, seg, selmerged[0], { operator: options.filterOp, property: options.filterProperty, value: options.filterValue});      
+    } else {      
       lastValidSel = seltrg[0];      
     }
     
@@ -99,7 +94,7 @@ export function ensureDescendantsHierarchy2<S extends MergeObject>(
   return trg;
 }
 
-function createProp(obj: Record<string,any>| any[], jsonPathSegment:string, selectedInSrc: Record<string,any>| any[], options: FilterOptions<string>) {
+function createProperty(obj: Record<string,any>| any[], jsonPathSegment:string, selectedInSrc: Record<string,any>| any[], options: FilterOptions<string>) {
   if(jsonPathSegment==='$') {        
     return obj;
   }
@@ -110,7 +105,7 @@ function createProp(obj: Record<string,any>| any[], jsonPathSegment:string, sele
   if(Array.isArray(selectedInSrc)) {
     created=[];
   } else if(typeof selectedInSrc === 'object') {
-    created= fill({},selectedInSrc, options);
+    created= fillRecord({},selectedInSrc, options);
   }
 
   if(created!=null && Array.isArray(obj)) {
@@ -122,9 +117,7 @@ function createProp(obj: Record<string,any>| any[], jsonPathSegment:string, sele
 }
 
 function jsonPathToSegments(fullPath: string): string[] {
-  return fullPath.split(/(?=\[)/g); //
-  /* const elems = fullPath.split('[');
-  return elems.map(e => e.endsWith(']') ? ('['.concat(e)):e)*/
+  return fullPath.split(/(?=\[)/g);   
 }
 
 function jsonPathSegmentToPropertyName(segment: string): string {
@@ -135,13 +128,13 @@ function jsonPathSegmentToPropertyName(segment: string): string {
   return propName;
 }
 
-function fill(created:Record<string,any>, original: Record<string,any>, options: FilterOptions<string> & { copyProperties?: string[]}): Record<string,any> {
+function fillRecord(created:Record<string,any>, original: Record<string,any>, options: FilterOptions<string> & { copyProperties?: string[]}): Record<string,any> {
   // if the original object has the property with the desired value (e.g. serverId==="IMM")
   // then we clone the tree from the original
   // TODO: this subtree in turn might have objects form other servers in it. we need to strip that as well
   const copyProps = options.copyProperties==null ? ['id', 'viewId', 'nameKey', 'imageKey', 'position','inputs'] : options.copyProperties;
   const clonedOrig = structuredClone(original);
-  console.log('FILL: ',created, clonedOrig, options)  
+  // console.log('FILL: ',created, clonedOrig, options)  
   if(options.property!=null && doCompare(original[options.property],options.operator ?? FilterOperator.sEQ, `${options.value}`)) {    
     created =  {
       ...clonedOrig  
