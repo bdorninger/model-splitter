@@ -96,8 +96,17 @@ function createProperty(obj: Record<string,any>| any[] , selectedInSrc: Record<s
   } else if(typeof selectedInSrc === 'object') {    
     created= fillRecord({},selectedInSrc, options);
   }
-
+  
   if(created!=null && Array.isArray(obj)) {
+    console.log('path.....:',obj.length, propName,options.path)
+    const end = Number(propName);
+    // indices of source and target object may deviate, as we add with push
+    // thus insert dummy nulls, cleanup after finishing
+    for(let i=obj.length;i<end;i++) {
+      obj.push(null);  
+    }
+    
+    // propname is index!
     obj.push(created);
   } else if(created!=null && !Array.isArray(obj) && typeof obj === 'object') {
     obj[propName] = created;

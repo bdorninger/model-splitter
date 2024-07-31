@@ -1251,14 +1251,15 @@ export function markObject(
     objectsMustHaveProps?: string[];
     doNotFollow?: string[];
     eraseMark?: boolean;
+    cleanupArrays?: boolean;
   },
   log?: (msg: string, ...args: any) => void,
 ): void {
-  if (options.property == null || typeof model !== 'object') {
+  if (model==null || options.property == null || typeof model !== 'object') {
     return;
   }
 
-  if (Array.isArray(model)) {
+  if (Array.isArray(model)) {    
     model.forEach((el) => markObject(el, options, log));
     return;
   }
@@ -1267,20 +1268,25 @@ export function markObject(
   const prop = options.property;
   const dnf = options.doNotFollow ?? [];
   const mustHave = options.objectsMustHaveProps ?? [];
+  const cleanArrays = options.cleanupArrays !== false; // not set --> true
 
   let markHere = true;
   for (let p in m) {
     if (p === prop) {
       continue;
     }
+
     if (
       typeof m[p] === 'object' &&
       !dnf.find((n) => n === p) &&
       !(Array.isArray(m[p]) && m[p].length === 0)
     ) {
+      if(Array.isArray(m[p]) && cleanArrays) {
+        m[p] = m[p].filter((elem:any) => elem!=null);
+      }
       markObject(m[p], options, log);
       markHere = false || (options.eraseMark ?? false);
-    }
+    } 
   }
 
   if (!markHere) {

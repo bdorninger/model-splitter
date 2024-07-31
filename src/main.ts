@@ -16,7 +16,7 @@ import './style.css';
 
 function trav(obj: any, p: string): boolean {
   let hasProp = false;
-  if (typeof obj === 'object' && !Array.isArray(obj)) {
+  if (obj != null && typeof obj === 'object' && !Array.isArray(obj)) {
     if (Object.hasOwn(obj, p)) {
       console.warn(`obj has prop '${p}'`,obj, obj[p]);
       hasProp = true;
@@ -71,11 +71,13 @@ const target = split(merged,{
 // target = ensureDescendantsHierarchy2(merged, target, { value: `$['content'][0]['header'][2]`, property: 'id'})
 markObject(target,{
   property: markerProp,
-  eraseMark:true
+  eraseMark:true,
+  cleanupArrays: false
 })
 markObject(target,{
   property:'serverId',
-  eraseMark:true
+  eraseMark:true,
+  cleanupArrays: false
 })
 // console.log(`TRG`, JSON.stringify(target, undefined,2));
 
