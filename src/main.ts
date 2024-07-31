@@ -60,7 +60,7 @@ if (ta != null) {
   ta.value = JSON.stringify(merged, undefined, 2);
 }
 
-const splitDevice='PCELL';
+const splitDevice='IMM';
 const target = split(merged,{
   property: markerProp,
   value: splitDevice,

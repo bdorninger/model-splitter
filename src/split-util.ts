@@ -37,9 +37,9 @@ export function split<M extends Record<string,any>>(merged: M, options: FilterOp
   });
   */
   
-  // console.log(`Objects found with ${options.property} ${options.operator} ${options.value}`)
-  // sel.forEach(s => console.log(s));
-  // console.log(`------------`)
+  console.log(`Objects found with ${options.property} ${options.operator} ${options.value}`)
+  sel.forEach(s => console.log(s));
+  console.log(`------------`)
   
   sel.forEach((ssel) => {
     if (ssel.path != null) {      
