@@ -1,6 +1,5 @@
 
 import { FilterOperator, FilterOptions, MergeObject, doCompare, remove, select, selectOrRemove } from './merge-util';
-import { ViewConfig } from './types';
 
 /*
  * TODO: 
@@ -9,45 +8,46 @@ import { ViewConfig } from './types';
  */
 
 /**
- *
+ * Splits a part off a specified model applying the specifired options.
+ * Objects will beselected by testing each object for the presence of the specified property 
+ * matching the specified value using the specified operator.
  * 
- * @param merged 
- * @param options 
- * @returns 
+ * This function reconstructs/preserves the selected object's ancestor hierarchy. 
+ * If this is unwanted, simply use the functions select/remove from merge utils.
+ * 
+ * Matched objects are copied in every aspect (i.e. each own property is copied). For objects along the anceostor hierarchy,
+ *  properties specified in "copyProperties" will be copied. If that option is not specified, only an empty object is constructed
+ * 
+ * @param merged the full (and previously merged) object
+ * @param options options, telling how to split the object.
+ * @returns the split off part of the specified object
  */
-export function split(merged: ViewConfig, options: FilterOptions & { copyProperties?: string[]}): ViewConfig {
+export function split<M extends Record<string,any>>(merged: M, options: FilterOptions & { copyProperties?: string[]}): M {
   const sel = selectOrRemove(
     merged,
     options,
     'select'
   ); 
   
-  let target = {};
+  let target = {} as M;
 
+  /*
   fillRecord(target,merged,{
     copyProperties: options.copyProperties ?? []
   });
-   
-  // does it make a difference ? 
-  // YES: sorting causes mangling up the structure in the target!
-  /*sel.sort(
-    (a, b) =>
-      (a.path?.split('[').length ?? 0) - (b.path?.split('[').length ?? 0)
-  );*/
-
-  console.log(`Objects found with ${options.property} ${options.operator} ${options.value}`)
-  sel.forEach(s => console.log(s));
-  console.log(`------------`)
+  */
+  
+  // console.log(`Objects found with ${options.property} ${options.operator} ${options.value}`)
+  // sel.forEach(s => console.log(s));
+  // console.log(`------------`)
   
   sel.forEach((ssel) => {
     if (ssel.path != null) {      
-      target = recreateObjectHierarchy(merged, target, { 
-      path: ssel.path!, operator: options.operator!, property: options.property!, value: options.value!})      
+      target = recreateObjectHierarchy(merged, target, { ...options, path: ssel.path})      
     }
   });
 
-
-  //
+  // cleaning out potential leftovers
   remove(target,{
     property:options.property,
     value: options.value,
@@ -61,45 +61,39 @@ export function split(merged: ViewConfig, options: FilterOptions & { copyPropert
 // Recreates the contributor specific hierarchy and copies selected content
 function recreateObjectHierarchy<S extends MergeObject>(
   obj: S,
-  trg: S,
+  target: S,
   options: FilterOptions & { path: string, copyProperties?: string[]}): S {
 
   if(typeof options.value !== 'string') {
     throw new Error('wrong type for options.value. must be a string and a valid json path');
   }  
+  
   const elems = jsonPathToSegments(options.path);
-  let p2 ='';  
-  let lastValidSel = null;
+  let partialPath ='';  
+  let currentTarget = target;
   for (let i = 0; i < elems.length; i++) {
     let seg = elems[i];    
-    p2 = p2.concat(seg);    
-    const seltrg = select(trg, {
-      jsonPathExpression: p2,
+    partialPath = partialPath.concat(seg);    
+    const seltrg = select(target, {
+      jsonPathExpression: partialPath,
     });
     const selmerged = select(obj, {
-      jsonPathExpression: p2,
+      jsonPathExpression: partialPath,
     });
-    if(seltrg.length === 0) {      
-      lastValidSel = createProperty(lastValidSel, seg, selmerged[0], { operator: options.operator, property: options.property, value: options.value});      
-    } else {      
-      lastValidSel = seltrg[0];      
-    }
-    
+    currentTarget = seltrg.length === 0 ? createProperty(currentTarget, selmerged[0], { ...options, path: seg}):seltrg[0]
+    if(partialPath==='$') {
+      target = currentTarget as S;
+    }   
   }
-  return trg;
+  return target;
 }
 
-function createProperty(obj: Record<string,any>| any[], jsonPathSegment:string, selectedInSrc: Record<string,any>| any[], options: FilterOptions<string>) {
-  if(jsonPathSegment==='$') {        
-    return obj;
-  }
-  
-  const propName = jsonPathSegmentToPropertyName(jsonPathSegment);
-  
+function createProperty(obj: Record<string,any>| any[] , selectedInSrc: Record<string,any>| any[], options: FilterOptions<string>  & { path: string, copyProperties?: string[]}) {    
+  const propName = jsonPathSegmentToPropertyName(options.path);  
   let created = undefined;
   if(Array.isArray(selectedInSrc)) {
     created=[];
-  } else if(typeof selectedInSrc === 'object') {
+  } else if(typeof selectedInSrc === 'object') {    
     created= fillRecord({},selectedInSrc, options);
   }
 
@@ -124,9 +118,6 @@ function jsonPathSegmentToPropertyName(segment: string): string {
 }
 
 function fillRecord(created:Record<string,any>, original: Record<string,any>, options: FilterOptions<string> & { copyProperties?: string[]}): Record<string,any> {
-  // if the original object has the property with the desired value (e.g. serverId==="IMM")
-  // then we clone the tree from the original
-  // TODO: this subtree in turn might have objects form other servers in it. we need to strip that as well
   const copyProps = options.copyProperties ?? [];
   const clonedOrig = structuredClone(original);
   // console.log('FILL: ',created, clonedOrig, options)  
@@ -141,9 +132,6 @@ function fillRecord(created:Record<string,any>, original: Record<string,any>, op
       }
     })
   }
-
-  // TODO: more properties, use whitlist/blacklist
-
   return created
 }
 
