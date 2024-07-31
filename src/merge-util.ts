@@ -1233,56 +1233,71 @@ export function doCompare<OT=any>(op1: OT, operator:FilterOperator, op2: OT): bo
 }
 
 
-export function markContrib(  
-  model: unknown|unknown[],
-  options: FilterOptions & { objectsMustHaveProps?:string[], doNotFollow?: string[], eraseMeta?: boolean }
+/**
+ * Marks the specified model object with a property specified in options.
+ *
+ * Starts at root and descends into subobjects (expect the properties with names specified in "doNotFollow").
+ * If "objectsMustHaveProperties" is specified and non-empty, the object-to-be-marked needs to have at least one property with one of the names in that option
+ * 
+ * If "eraseMark" is specified, the property designated to mark the object is deleted from the object
+ *
+ * @param model the object to mark
+ * @param options some options to control the object tree marking
+ * @param log an optional log-function for error reporting
+ */
+export function markObject(
+  model: unknown | unknown[],
+  options: Pick<FilterOptions, 'property' | 'value'> & {
+    objectsMustHaveProps?: string[];
+    doNotFollow?: string[];
+    eraseMark?: boolean;
+  },
+  log?: (msg: string, ...args: any) => void,
 ): void {
-  
-  if(typeof model !=='object') {
+  if (options.property == null || typeof model !== 'object') {
     return;
   }
 
-  if(Array.isArray(model)) {
-    model.forEach(el => markContrib(el,options))
+  if (Array.isArray(model)) {
+    model.forEach((el) => markObject(el, options, log));
     return;
   }
 
-  const m = model as Record<string,any>;
-  const prop = options.property??'$contributor';  
-  const dnf = options.doNotFollow??[];
-  const mustHave = options.objectsMustHaveProps;
+  const m = model as Record<string, any>;
+  const prop = options.property;
+  const dnf = options.doNotFollow ?? [];
+  const mustHave = options.objectsMustHaveProps ?? [];
 
   let markHere = true;
-  for(let p in m) {
-    if(p===prop) {
+  for (let p in m) {
+    if (p === prop) {
       continue;
-    }    
-    if(typeof m[p]==='object' && !dnf.find(n => n===p) && !(Array.isArray(m[p]) && m[p].length===0)) {
-      
-      markContrib(m[p], options);
-      markHere = false || (options.eraseMeta ?? false);
-    } 
+    }
+    if (
+      typeof m[p] === 'object' &&
+      !dnf.find((n) => n === p) &&
+      !(Array.isArray(m[p]) && m[p].length === 0)
+    ) {
+      markObject(m[p], options, log);
+      markHere = false || (options.eraseMark ?? false);
+    }
   }
-  
-  if(markHere) {
-    if(Object.hasOwn(m,prop)) {
-      if(options.eraseMeta) {
-        delete(m[prop]);
-      } else {
-        console.error(`Already marked with contrib...overwriting ${m[prop]} with ${options.value}`)
-      }
-    }
-    if(mustHave==null || mustHave.find(p => p===prop)) {
-      m[prop] = options.value;
-    }
-  }  
 
-  /*  
-  if(markHere && m[prop]!=null && Array.isArray(m[prop])) {
-    m[prop].push(options.value);
-  } else if(markHere && m[prop]==null) {
-    m[prop] = [options.value];
-  }  
-  */
-    
+  if (!markHere) {
+    return;
+  }
+
+  if (Object.hasOwn(m, prop) && options.eraseMark) {
+    delete m[prop];
+  } else if (Object.hasOwn(m, prop)) {
+    log?.(
+      `Already marked with '${m[prop]}'...ignoring '${options.value}'`,
+    );
+  } else if (
+    !options.eraseMark &&
+    (mustHave.length === 0 ||
+      mustHave.find((p) => p !== prop && Object.hasOwn(m, p)))
+  ) {
+    m[prop] = options.value;
+  }
 }
