@@ -82,7 +82,8 @@ function recreateObjectHierarchy<S extends MergeObject>(
     });
     currentTarget = seltrg.length === 0 ? createProperty(currentTarget, selmerged[0], { ...options, path: seg}):seltrg[0]
     if(partialPath==='$') {
-      target = currentTarget as S;
+      // target = currentTarget as S;
+      fillRecord(target,selmerged[0],{...options})
     }   
   }
   return target;
@@ -98,7 +99,7 @@ function createProperty(obj: Record<string,any>| any[] , selectedInSrc: Record<s
   }
   
   if(created!=null && Array.isArray(obj)) {
-    console.log('path.....:',obj.length, propName,options.path)
+    // console.log('path.....:',obj.length, propName,options.path)
     const end = Number(propName);
     // indices of source and target object may deviate, as we add with push
     // thus insert dummy nulls, cleanup after finishing
